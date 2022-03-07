@@ -1,21 +1,27 @@
 package com.android.example.weatherapp.presentation
 
+import android.content.Context
+import android.location.Location
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.example.weatherapp.core.util.Gps
-import com.android.example.weatherapp.domain.model.WeatherInfo
+import com.android.example.weatherapp.core.util.WeatherUtils.getActivity
 import com.android.example.weatherapp.domain.use_case.GetWeather
+import com.google.android.gms.location.FusedLocationProviderClient
+
+import com.google.android.gms.location.LocationServices
 import com.plcoding.dictionary.core.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.math.RoundingMode
+import java.text.DecimalFormat
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,6 +29,7 @@ class WeatherViewModel @Inject constructor(
     private val getWeatherInfo: GetWeather
 ) : ViewModel() {
 
+    private var fusedLocationClient: FusedLocationProviderClient? = null
 
     private val _gpsQuery = mutableStateOf(Gps(-1.0, -1.0))
     val gpsQuery: State<Gps> = _gpsQuery
@@ -35,9 +42,27 @@ class WeatherViewModel @Inject constructor(
 
     private var weatherJob: Job? = null
 
-    fun getGpsLocation(): Gps {
+    fun getWeatherWithCurrentLocation(context: Context) {
 
-        return Gps(-1.0, -1.0)
+        fusedLocationClient = context.getActivity()
+            ?.let { LocationServices.getFusedLocationProviderClient(it) }
+
+        try{
+            fusedLocationClient?.lastLocation
+                ?.addOnSuccessListener { location : Location? ->
+                    if(location?.latitude!= null){
+
+                        val df = DecimalFormat("#.####")
+                        df.roundingMode = RoundingMode.DOWN
+                        val roundoffLat = df.format(location.latitude)
+                        val roundoffLon = df.format(location.longitude)
+                        getWeather(Gps(roundoffLat.toDouble(), roundoffLon.toDouble() ))
+                    }
+
+                }
+        }catch(e:SecurityException){
+            //TODO Snackbar
+        }
     }
 
     fun isLocationCurrentlySelected(gps: Gps) : Boolean{
@@ -45,6 +70,11 @@ class WeatherViewModel @Inject constructor(
             return true
         }
             return false
+    }
+
+    fun showGPSPermissionSnackBar(textToShow : String, buttonText: String, refused2ndTime: Boolean){
+        viewModelScope.launch { _eventFlow.emit(
+            UIEvent.ShowGPSPermissionSnackbar(textToShow,buttonText, refused2ndTime))}
     }
 
     fun getWeather(gps: Gps) {
@@ -83,6 +113,7 @@ class WeatherViewModel @Inject constructor(
     }
         sealed class UIEvent {
             data class ShowSnackbar(val message: String) : UIEvent()
+            data class ShowGPSPermissionSnackbar(val message: String, val btnLabel:String, val refused2ndTime: Boolean ) : UIEvent()
         }
 
 }

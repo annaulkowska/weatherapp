@@ -1,13 +1,10 @@
 package com.android.example.weatherapp.presentation
 
-import android.Manifest
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
-import android.os.Build
+import androidx.preference.PreferenceManager
 import android.provider.Settings
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,27 +12,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationSearching
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.android.example.weatherapp.ui.theme.WeatherAppTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.accompanist.permissions.rememberPermissionState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
-import coil.compose.rememberImagePainter
-import coil.request.ImageRequest
 import com.android.example.weatherapp.core.util.WeatherUtils
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 
 
@@ -54,20 +45,82 @@ fun WeatherScreen(
 ) {
     val scaffoldState = rememberScaffoldState()
     val state = viewModel.state.value
+    val context = LocalContext.current
 
     WeatherAppTheme {
-        val permissionState = rememberPermissionState(
-            permission = Manifest.permission.ACCESS_FINE_LOCATION
+        val locationPermissionsState = rememberMultiplePermissionsState(
+            listOf(
+                android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                android.Manifest.permission.ACCESS_FINE_LOCATION,
+            )
         )
+
+        LaunchedEffect(key1 = true) {
+            viewModel.eventFlow.collectLatest { event ->
+                when (event) {
+                    is WeatherViewModel.UIEvent.ShowSnackbar -> {
+                      scaffoldState.snackbarHostState.showSnackbar(
+                            message = event.message, duration = SnackbarDuration.Long
+                        )
+                    }
+                    is WeatherViewModel.UIEvent.ShowGPSPermissionSnackbar -> {
+                        val snackbarResult = scaffoldState.snackbarHostState.showSnackbar(
+                            message = event.message,
+                            actionLabel = event.btnLabel, duration = SnackbarDuration.Long
+                        )
+                        when (snackbarResult) {
+                            SnackbarResult.Dismissed -> Log.d("Snackbar", "Dismissed")
+                            SnackbarResult.ActionPerformed -> {
+                                if (event.refused2ndTime) {
+                                    context.startActivity(
+                                        Intent(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            Uri.fromParts("package", context.packageName, null)
+                                        )
+                                    )
+                                } else {
+                                    locationPermissionsState.launchMultiplePermissionRequest()
+                                    PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean(WeatherUtils.KEY_PERMISSION_REQUESTED, true).apply()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Scaffold(
             scaffoldState = scaffoldState,
             floatingActionButton = {
 
                 FloatingActionButton(onClick = {
 
-                    // Test()
-                    val gps = viewModel.getGpsLocation()
-                    viewModel.getWeather(gps)
+                    if (locationPermissionsState.allPermissionsGranted) {
+                        viewModel.getWeatherWithCurrentLocation(context)
+                    } else {
+                        val allPermissionsRevoked =
+                            locationPermissionsState.permissions.size ==
+                                    locationPermissionsState.revokedPermissions.size
+
+                        var refused2time = false
+                        val textToShow =  if (locationPermissionsState.shouldShowRationale) {
+                            "Getting your location is important for if you want to check the weather for your place. Thank you :D"
+                        } else {
+                            "This feature requires location permission"
+                        }
+                        if (!locationPermissionsState.shouldShowRationale && PreferenceManager.getDefaultSharedPreferences(context).getBoolean(WeatherUtils.KEY_PERMISSION_REQUESTED, false)) {
+                            refused2time = true
+                        }
+
+                        val buttonText = if (!allPermissionsRevoked) {
+                            "Allow precise location"
+                        } else if (refused2time) {
+                            "Open App Settings"
+                        } else {
+                            "Request permissions"
+                        }
+                        viewModel.showGPSPermissionSnackBar(textToShow, buttonText, refused2time)
+                    }
                 }) {
                     Icon(
                         imageVector = Icons.Default.LocationSearching,
@@ -78,166 +131,20 @@ fun WeatherScreen(
         ) {
             Box(
                 modifier = Modifier
+                    .fillMaxHeight()
                     .background(MaterialTheme.colors.background)
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxHeight()
                         .padding(16.dp)
                 ) {
-
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Button(
-                            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.MAINZ)) {
-                                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
-                            } else {
-                                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
-                            },
-                            onClick = {
-                                viewModel.getWeather(WeatherUtils.MAINZ)
-                            },
-                        ) {
-                            Text("MAINZ")
-                        }
-                        Button(
-                            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.DARMSTADT)) {
-                                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
-                            } else {
-                                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
-                            },
-                            onClick = {
-                                viewModel.getWeather(WeatherUtils.DARMSTADT)
-                            },
-                        ) {
-                            Text("DARMSTADT")
-                        }
-                    }
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Button(
-                            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.WIESBADEN)) {
-                                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
-                            } else {
-                                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
-                            },
-                            onClick = {
-                                viewModel.getWeather(WeatherUtils.WIESBADEN)
-                            },
-                        ) {
-                            Text("WIESBADEN")
-                        }
-                        Button(
-                            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.FRANKFURT_AM_MAIN)) {
-                                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
-                            } else {
-                                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
-                            },
-                            onClick = {
-                                viewModel.getWeather(WeatherUtils.FRANKFURT_AM_MAIN)
-                            },
-                        ) {
-                            Text("FRANKFURT AM MAIN")
-                        }
-                    }
-
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Wind speed: " + viewModel.state.value.weatherInfo?.current?.wind_speed?.toString() + " m/s ",
-                            fontSize = 16.sp
-                        )
-
-                        Text(
-                            text = viewModel.state.value.weatherInfo?.current?.weather?.get(0)?.description
-                                ?: "", fontSize = 16.sp
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Pressure: " + viewModel.state.value.weatherInfo?.current?.pressure?.toString() + " hPA",
-                            fontSize = 16.sp
-                        )
-                        Text(
-                            text = "Humidity: " + viewModel.state.value.weatherInfo?.current?.humidity?.toString() + " %",
-                            fontSize = 16.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Dew point: " + viewModel.state.value.weatherInfo?.current?.dew_point?.roundToInt()
-                                .toString() + " °C",
-                            fontSize = 16.sp
-                        )
-                        Text(
-                            text = "Visibility: " + viewModel.state.value.weatherInfo?.current?.visibility?.toString() + " km",
-                            fontSize = 16.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        Text(
-                            text = viewModel.state.value.weatherInfo?.current?.temp?.roundToInt()
-                                .toString() + "°C",
-                            fontSize = 30.sp
-                        )
-
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                "https://openweathermap.org/img/wn/${
-                                    viewModel.state.value.weatherInfo?.current?.weather?.get(
-                                        0
-                                    )?.icon
-                                }@2x.png"
-                            ),
-                            contentDescription = "current_weather_image",
-                            modifier = Modifier.size(88.dp)
-                        )
-
-                        Text(
-                            text = "Feels like: " + viewModel.state.value.weatherInfo?.current?.feels_like?.roundToInt()
-                                .toString() + "°C",
-                            fontSize = 24.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize()
                     ) {
+                        item {
+                            LocationButtons(viewModel)
+                        }
                         state.weatherInfo?.dailys?.let { dailys ->
                             items(dailys.size) { i ->
                                 val daily = state.weatherInfo.dailys[i]
@@ -251,116 +158,156 @@ fun WeatherScreen(
                             }
                         }
                     }
-                }
 
+                }
                 if (state.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-
             }
         }
 
     }
-
-
-    @Composable
-    fun PermissionInformation() {
-
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(text = "Location permission accepted")
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-
-        } else {
-
-        }
-
-    }
-
-    @ExperimentalPermissionsApi
-    @Composable
-    fun RequireLocationPermission(
-        navigateToSettingsScreen: () -> Unit,
-        content: @Composable() () -> Unit
-    ) {
-        // Track if the user doesn't want to see the rationale any more.
-        var doNotShowRationale by rememberSaveable { mutableStateOf(false) }
-
-        // Permission state
-        val permissionState = rememberMultiplePermissionsState(
-            listOf(
-                android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        )
-        when {
-            permissionState.allPermissionsGranted -> {
-                content()
-            }
-            // If the user denied the permission but a rationale should be shown, or the user sees
-            // the permission for the first time, explain why the feature is needed by the app and allow
-            // the user to be presented with the permission again or to not see the rationale any more.
-
-            //  || !permissionState.permissionRequested
-            permissionState.shouldShowRationale -> {
-                if (doNotShowRationale) {
-                    Text("Feature not available")
-                } else {
-                    Column {
-                        Text("Need to detect current location. Please grant the permission.")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row {
-                            Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
-                                Text("Request permission")
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Button(onClick = { doNotShowRationale = true }) {
-                                Text("Don't show rationale again")
-                            }
-                        }
-                    }
-                }
-            }
-            // If the criteria above hasn't been met, the user denied the permission. Let's present
-            // the user with a FAQ in case they want to know more and send them to the Settings screen
-            // to enable it the future there if they want to.
-            else -> {
-                Column {
-                    Text(
-                        "Request location permission denied. " +
-                                "Need current location to show nearby places. " +
-                                "Please grant access on the Settings screen."
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = navigateToSettingsScreen) {
-                        Text("Open Settings")
-                    }
-                }
-            }
-        }
-    }
-
-    @ExperimentalPermissionsApi
-    @Composable
-    fun Test() {
-        val context = LocalContext.current
-
-        RequireLocationPermission(navigateToSettingsScreen = {
-            context.startActivity(
-                Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", context.packageName, null)
-                )
-            )
-        }) {
-            Text("Location Permission Accessible")
-        }
-    }
-
-
 }
+
+@Composable
+fun LocationButtons(viewModel: WeatherViewModel) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Button(
+            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.MAINZ)) {
+                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
+            } else {
+                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+            },
+            onClick = {
+                viewModel.getWeather(WeatherUtils.MAINZ)
+            },
+        ) {
+            Text("MAINZ")
+        }
+        Button(
+            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.DARMSTADT)) {
+                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
+            } else {
+                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+            },
+            onClick = {
+                viewModel.getWeather(WeatherUtils.DARMSTADT)
+            },
+        ) {
+            Text("DARMSTADT")
+        }
+    }
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Button(
+            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.WIESBADEN)) {
+                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
+            } else {
+                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+            },
+            onClick = {
+                viewModel.getWeather(WeatherUtils.WIESBADEN)
+            },
+        ) {
+            Text("WIESBADEN")
+        }
+        Button(
+            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.FRANKFURT_AM_MAIN)) {
+                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
+            } else {
+                ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+            },
+            onClick = {
+                viewModel.getWeather(WeatherUtils.FRANKFURT_AM_MAIN)
+            },
+        ) {
+            Text("FRANKFURT AM MAIN")
+        }
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "Wind speed: " + viewModel.state.value.weatherInfo?.current?.wind_speed?.toString() + " m/s ",
+            fontSize = 16.sp
+        )
+        Text(
+            text = viewModel.state.value.weatherInfo?.current?.weather?.get(0)?.description
+                ?: "", fontSize = 16.sp
+        )
+    }
+    Spacer(modifier = Modifier.width(8.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "Pressure: " + viewModel.state.value.weatherInfo?.current?.pressure?.toString() + " hPA",
+            fontSize = 16.sp
+        )
+        Text(
+            text = "Humidity: " + viewModel.state.value.weatherInfo?.current?.humidity?.toString() + " %",
+            fontSize = 16.sp
+        )
+    }
+    Spacer(modifier = Modifier.width(8.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "Dew point: " + viewModel.state.value.weatherInfo?.current?.dew_point?.roundToInt()
+                .toString() + " °C",
+            fontSize = 16.sp
+        )
+        Text(
+            text = "Visibility: " + viewModel.state.value.weatherInfo?.current?.visibility?.toString() + " km",
+            fontSize = 16.sp
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        Text(
+            text = viewModel.state.value.weatherInfo?.current?.temp?.roundToInt()
+                .toString() + "°C",
+            fontSize = 30.sp
+        )
+        Image(
+            painter = rememberAsyncImagePainter(
+                "https://openweathermap.org/img/wn/${
+                    viewModel.state.value.weatherInfo?.current?.weather?.get(
+                        0
+                    )?.icon
+                }@2x.png"
+            ),
+            contentDescription = "current_weather_image",
+            modifier = Modifier.size(88.dp)
+        )
+        Text(
+            text = "Feels like: " + viewModel.state.value.weatherInfo?.current?.feels_like?.roundToInt()
+                .toString() + "°C",
+            fontSize = 24.sp
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+}
+
