@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.example.weatherapp.core.util.Gps
+import com.android.example.weatherapp.core.util.WeatherUtils
 import com.android.example.weatherapp.core.util.WeatherUtils.getActivity
 import com.android.example.weatherapp.domain.use_case.GetWeather
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -42,15 +43,17 @@ class WeatherViewModel @Inject constructor(
 
     private var weatherJob: Job? = null
 
-    fun getWeatherWithCurrentLocation(context: Context) {
+    init {
+        getWeather(WeatherUtils.MAINZ)
+    }
 
+    fun getWeatherWithCurrentLocation(context: Context) {
         fusedLocationClient = context.getActivity()
             ?.let { LocationServices.getFusedLocationProviderClient(it) }
-
-        try{
+        try {
             fusedLocationClient?.lastLocation
-                ?.addOnSuccessListener { location : Location? ->
-                    if(location?.latitude!= null){
+                ?.addOnSuccessListener { location: Location? ->
+                    if (location?.latitude != null) {
 
                         val df = DecimalFormat("#.####")
                         df.roundingMode = RoundingMode.DOWN
@@ -58,10 +61,8 @@ class WeatherViewModel @Inject constructor(
                         val roundoffLon = df.format(location.longitude)
                         getWeather(Gps(roundoffLat.toDouble(), roundoffLon.toDouble() ))
                     }
-
                 }
         }catch(e:SecurityException){
-            //TODO Snackbar
         }
     }
 
@@ -115,5 +116,4 @@ class WeatherViewModel @Inject constructor(
             data class ShowSnackbar(val message: String) : UIEvent()
             data class ShowGPSPermissionSnackbar(val message: String, val btnLabel:String, val refused2ndTime: Boolean ) : UIEvent()
         }
-
 }

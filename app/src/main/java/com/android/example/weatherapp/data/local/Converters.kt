@@ -2,9 +2,10 @@ package com.android.example.weatherapp.data.local
 
 import androidx.room.ProvidedTypeConverter
 import androidx.room.TypeConverter
-import com.android.example.weatherapp.domain.model.*
+import com.android.example.weatherapp.domain.model.Alert
+import com.android.example.weatherapp.domain.model.Current
+import com.android.example.weatherapp.domain.model.Daily
 import com.google.gson.reflect.TypeToken
-import com.plcoding.dictionary.feature_dictionary.data.util.GsonParser
 import com.plcoding.dictionary.feature_dictionary.data.util.JsonParser
 
 
@@ -48,8 +49,8 @@ class Converters(
     fun fromCurrentJson(json: String): Current {
         return jsonParser.fromJson<Current>(
             json,
-            object : TypeToken<Current>(){}.type
-        )!! //TODO
+            object : TypeToken<Current>() {}.type
+        )!!
     }
 
     @TypeConverter
@@ -57,39 +58,6 @@ class Converters(
         return jsonParser.toJson(
             current,
             object : TypeToken<Current>(){}.type
-        ) ?: "[]"
-    }
-
-
-    @TypeConverter
-    fun fromWeatherJson(json: String): List<Weather> {
-        return jsonParser.fromJson<ArrayList<Weather>>(
-            json,
-            object : TypeToken<ArrayList<Weather>>(){}.type
-        ) ?: emptyList()
-    }
-
-    @TypeConverter
-    fun toWeatherJson(weatherlist: List<Weather>): String {
-        return jsonParser.toJson(
-            weatherlist,
-            object : TypeToken<ArrayList<Weather>>(){}.type
-        ) ?: "[]"
-    }
-
-    @TypeConverter
-    fun fromWeatherXJson(json: String): List<WeatherX> {
-        return jsonParser.fromJson<ArrayList<WeatherX>>(
-            json,
-            object : TypeToken<ArrayList<WeatherX>>(){}.type
-        ) ?: emptyList()
-    }
-
-    @TypeConverter
-    fun toWeatherXJson(weatherlist: List<WeatherX>): String {
-        return jsonParser.toJson(
-            weatherlist,
-            object : TypeToken<ArrayList<WeatherX>>(){}.type
         ) ?: "[]"
     }
 }

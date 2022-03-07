@@ -2,7 +2,6 @@ package com.android.example.weatherapp.presentation
 
 import android.content.Intent
 import android.net.Uri
-import androidx.preference.PreferenceManager
 import android.provider.Settings
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -12,31 +11,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationSearching
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.preference.PreferenceManager
+import coil.compose.rememberAsyncImagePainter
+import com.android.example.weatherapp.core.util.WeatherUtils
 import com.android.example.weatherapp.ui.theme.WeatherAppTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
-import com.android.example.weatherapp.core.util.WeatherUtils
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    WeatherAppTheme {
-
-    }
-}
 
 @ExperimentalPermissionsApi
 @Composable
@@ -54,14 +45,13 @@ fun WeatherScreen(
                 android.Manifest.permission.ACCESS_FINE_LOCATION,
             )
         )
-
         LaunchedEffect(key1 = true) {
             viewModel.eventFlow.collectLatest { event ->
                 when (event) {
                     is WeatherViewModel.UIEvent.ShowSnackbar -> {
                       scaffoldState.snackbarHostState.showSnackbar(
-                            message = event.message, duration = SnackbarDuration.Long
-                        )
+                          message = event.message, duration = SnackbarDuration.Short
+                      )
                     }
                     is WeatherViewModel.UIEvent.ShowGPSPermissionSnackbar -> {
                         val snackbarResult = scaffoldState.snackbarHostState.showSnackbar(
@@ -88,30 +78,25 @@ fun WeatherScreen(
                 }
             }
         }
-
         Scaffold(
             scaffoldState = scaffoldState,
             floatingActionButton = {
-
                 FloatingActionButton(onClick = {
-
                     if (locationPermissionsState.allPermissionsGranted) {
                         viewModel.getWeatherWithCurrentLocation(context)
                     } else {
                         val allPermissionsRevoked =
                             locationPermissionsState.permissions.size ==
                                     locationPermissionsState.revokedPermissions.size
-
                         var refused2time = false
                         val textToShow =  if (locationPermissionsState.shouldShowRationale) {
-                            "Getting your location is important for if you want to check the weather for your place. Thank you :D"
+                            "Getting your location is important if you want to check the weather for your place. Thank you :D"
                         } else {
                             "This feature requires location permission"
                         }
                         if (!locationPermissionsState.shouldShowRationale && PreferenceManager.getDefaultSharedPreferences(context).getBoolean(WeatherUtils.KEY_PERMISSION_REQUESTED, false)) {
                             refused2time = true
                         }
-
                         val buttonText = if (!allPermissionsRevoked) {
                             "Allow precise location"
                         } else if (refused2time) {
@@ -138,7 +123,6 @@ fun WeatherScreen(
                     modifier = Modifier
                         .padding(16.dp)
                 ) {
-
                     LazyColumn(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -190,16 +174,16 @@ fun LocationButtons(viewModel: WeatherViewModel) {
             Text("MAINZ")
         }
         Button(
-            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.DARMSTADT)) {
+            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.FRANKFURT_AM_MAIN)) {
                 ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
             } else {
                 ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
             },
             onClick = {
-                viewModel.getWeather(WeatherUtils.DARMSTADT)
+                viewModel.getWeather(WeatherUtils.FRANKFURT_AM_MAIN)
             },
         ) {
-            Text("DARMSTADT")
+            Text("FRANKFURT AM MAIN")
         }
     }
     Row(
@@ -221,16 +205,16 @@ fun LocationButtons(viewModel: WeatherViewModel) {
             Text("WIESBADEN")
         }
         Button(
-            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.FRANKFURT_AM_MAIN)) {
+            colors = if (viewModel.isLocationCurrentlySelected(WeatherUtils.DARMSTADT)) {
                 ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
             } else {
                 ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
             },
             onClick = {
-                viewModel.getWeather(WeatherUtils.FRANKFURT_AM_MAIN)
+                viewModel.getWeather(WeatherUtils.DARMSTADT)
             },
         ) {
-            Text("FRANKFURT AM MAIN")
+            Text("DARMSTADT")
         }
     }
     Row(

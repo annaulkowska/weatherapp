@@ -16,7 +16,7 @@ import org.junit.Test
 
 class GetWeatherTest {
 
-    var repository: WeatherRepository = mockk()
+    private var repository: WeatherRepository = mockk()
     lateinit var tested: GetWeather
     var weatherInfoResource: Resource<WeatherInfo> = mockk()
 

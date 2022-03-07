@@ -1,8 +1,10 @@
 package com.android.example.weatherapp.presentation
 
-import android.os.Build
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,8 +22,7 @@ import kotlin.math.roundToInt
 @Composable
 fun DailyItem(
     daily: Daily,
-    offset: Int,
-    modifier: Modifier = Modifier
+    offset: Int
 ){
     Row(modifier = Modifier
         .fillMaxWidth(),
@@ -37,10 +38,6 @@ fun DailyItem(
             text = daily.temp.max.roundToInt().toString() +"/"+ daily.temp.min.roundToInt().toString() + "°C",
             fontSize = 16.sp
         )
-      /*  Text(
-            text = daily.weather.get(0).description,
-            fontSize = 16.sp
-        )*/
         Image(
             painter = rememberAsyncImagePainter("https://openweathermap.org/img/wn/${daily.weather.get(0).icon}@2x.png"),
             contentDescription = "current_weather_image",
