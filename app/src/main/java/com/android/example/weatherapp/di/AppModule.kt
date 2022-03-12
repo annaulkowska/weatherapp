@@ -2,6 +2,8 @@ package com.android.example.weatherapp.di
 
 import android.app.Application
 import androidx.room.Room
+import com.android.example.weatherapp.core.util.DefaultDispatchers
+import com.android.example.weatherapp.core.util.DispatcherProvider
 import com.android.example.weatherapp.data.local.Converters
 import com.android.example.weatherapp.data.local.WeatherInfoDatabase
 import com.android.example.weatherapp.data.local.WeatherRepositoryImpl
@@ -43,7 +45,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideWeatherRepository(db: WeatherInfoDatabase, api: WeatherApi): WeatherRepository {
-        return WeatherRepositoryImpl(api, db.dao)
-    }
+    fun provideWeatherRepository(db: WeatherInfoDatabase, api: WeatherApi): WeatherRepository =
+        WeatherRepositoryImpl(api, db.dao)
+
+
+    @Provides
+    @Singleton
+    fun provideDispatchers(dispatchers: DefaultDispatchers): DispatcherProvider = dispatchers
 }

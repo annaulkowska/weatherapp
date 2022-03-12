@@ -1,10 +1,10 @@
 package com.android.example.weatherapp.domain.use_case
 
+import com.android.example.weatherapp.core.util.Resource
 import com.android.example.weatherapp.core.util.WeatherUtils
 import com.android.example.weatherapp.domain.model.WeatherInfo
 import com.android.example.weatherapp.domain.repository.WeatherRepository
 import com.google.common.truth.Truth.assertThat
-import com.plcoding.dictionary.core.util.Resource
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

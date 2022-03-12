@@ -1,10 +1,11 @@
 package com.android.example.weatherapp.data.local
 
+import com.android.example.weatherapp.core.util.Resource
 import com.android.example.weatherapp.core.util.WeatherUtils
 import com.android.example.weatherapp.data.remote.WeatherApi
 import com.android.example.weatherapp.domain.model.WeatherInfo
 import com.android.example.weatherapp.domain.repository.WeatherRepository
-import com.plcoding.dictionary.core.util.Resource
+
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import retrofit2.HttpException
@@ -32,10 +33,12 @@ class WeatherRepositoryImpl(
             dao.deleteWeatherInfo(remoteWeatherInfo.lat, remoteWeatherInfo.lon )
             dao.insertWeatherInfos(remoteWeatherInfo?.toWeatherInfoEntity())
         } catch(e: HttpException) {
-            emit(Resource.Error(
-                message = "Oops, something went wrong!",
-                data = weatherInfo
-            ))
+            emit(
+                Resource.Error(
+                    message = "Oops, something went wrong!",
+                    data = weatherInfo
+                )
+            )
         } catch(e: IOException) {
             emit(Resource.Error(
                 message = "Couldn't reach server, check your internet connection.",

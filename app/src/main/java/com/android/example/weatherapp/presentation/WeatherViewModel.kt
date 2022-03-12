@@ -6,14 +6,14 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.example.weatherapp.core.util.DispatcherProvider
 import com.android.example.weatherapp.core.util.Gps
+import com.android.example.weatherapp.core.util.Resource
 import com.android.example.weatherapp.core.util.WeatherUtils
 import com.android.example.weatherapp.core.util.WeatherUtils.getActivity
 import com.android.example.weatherapp.domain.use_case.GetWeather
 import com.google.android.gms.location.FusedLocationProviderClient
-
 import com.google.android.gms.location.LocationServices
-import com.plcoding.dictionary.core.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,7 +27,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WeatherViewModel @Inject constructor(
-    private val getWeatherInfo: GetWeather
+    private val getWeatherInfo: GetWeather,
+    private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
     private var fusedLocationClient: FusedLocationProviderClient? = null
@@ -54,26 +55,29 @@ class WeatherViewModel @Inject constructor(
             fusedLocationClient?.lastLocation
                 ?.addOnSuccessListener { location: Location? ->
                     if (location?.latitude != null) {
-
-                        val df = DecimalFormat("#.####")
-                        df.roundingMode = RoundingMode.DOWN
-                        val roundoffLat = df.format(location.latitude)
-                        val roundoffLon = df.format(location.longitude)
-                        getWeather(Gps(roundoffLat.toDouble(), roundoffLon.toDouble() ))
+                        getWeather(formatGpsCoordinates(location))
                     }
                 }
-        }catch(e:SecurityException){
+        } catch (e: SecurityException) {
         }
     }
 
-    fun isLocationCurrentlySelected(gps: Gps) : Boolean{
-        if(_gpsQuery.value == gps){
+    private fun formatGpsCoordinates(location: Location): Gps {
+        val df = DecimalFormat("#.####")
+        df.roundingMode = RoundingMode.DOWN
+        val roundoffLat = df.format(location.latitude)
+        val roundoffLon = df.format(location.longitude)
+        return Gps(roundoffLat.toDouble(), roundoffLon.toDouble())
+    }
+
+    fun isLocationCurrentlySelected(gps: Gps): Boolean {
+        if (_gpsQuery.value == gps) {
             return true
         }
-            return false
+        return false
     }
 
-    fun showGPSPermissionSnackBar(textToShow : String, buttonText: String, refused2ndTime: Boolean){
+    fun showGPSPermissionSnackBar(textToShow: String, buttonText: String, refused2ndTime: Boolean) {
         viewModelScope.launch { _eventFlow.emit(
             UIEvent.ShowGPSPermissionSnackbar(textToShow,buttonText, refused2ndTime))}
     }
@@ -81,7 +85,7 @@ class WeatherViewModel @Inject constructor(
     fun getWeather(gps: Gps) {
         _gpsQuery.value = gps
         weatherJob?.cancel()
-        weatherJob = viewModelScope.launch {
+        weatherJob = viewModelScope.launch(dispatchers.main) {
             getWeatherInfo(gps)
                 .onEach { result ->
                     when (result) {

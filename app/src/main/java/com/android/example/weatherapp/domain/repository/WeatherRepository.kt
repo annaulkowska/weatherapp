@@ -1,7 +1,7 @@
 package com.android.example.weatherapp.domain.repository
 
+import com.android.example.weatherapp.core.util.Resource
 import com.android.example.weatherapp.domain.model.WeatherInfo
-import com.plcoding.dictionary.core.util.Resource
 import kotlinx.coroutines.flow.Flow
 
 interface WeatherRepository {
