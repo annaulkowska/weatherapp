@@ -3,6 +3,7 @@ package com.android.example.weatherapp.core.util
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import com.android.example.weatherapp.domain.model.Gps
 
 object WeatherUtils {
     val MAINZ = Gps(50.0, 8.2711)

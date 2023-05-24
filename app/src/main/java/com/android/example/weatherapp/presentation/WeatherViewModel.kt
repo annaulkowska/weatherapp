@@ -2,24 +2,34 @@ package com.android.example.weatherapp.presentation
 
 import android.content.Context
 import android.location.Location
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.example.weatherapp.core.util.DispatcherProvider
-import com.android.example.weatherapp.core.util.Gps
 import com.android.example.weatherapp.core.util.Resource
-import com.android.example.weatherapp.core.util.WeatherUtils
 import com.android.example.weatherapp.core.util.WeatherUtils.getActivity
+import com.android.example.weatherapp.domain.model.City
+import com.android.example.weatherapp.domain.model.CityBtnModel
+import com.android.example.weatherapp.domain.model.DARMSTADT
+import com.android.example.weatherapp.domain.model.FRANKFURT_AM_MAIN
+import com.android.example.weatherapp.domain.model.Gps
+import com.android.example.weatherapp.domain.model.MAINZ
+import com.android.example.weatherapp.domain.model.WIESBADEN
 import com.android.example.weatherapp.domain.use_case.GetWeather
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -36,8 +46,8 @@ class WeatherViewModel @Inject constructor(
     private val _gpsQuery = mutableStateOf(Gps(-1.0, -1.0))
     val gpsQuery: State<Gps> = _gpsQuery
 
-    private val _state = mutableStateOf(WeatherInfoState())
-    val state: State<WeatherInfoState> = _state
+    private val _state = MutableStateFlow(WeatherInfoState())
+    val state: StateFlow<WeatherInfoState> = _state.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<UIEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
@@ -45,7 +55,15 @@ class WeatherViewModel @Inject constructor(
     private var weatherJob: Job? = null
 
     init {
-        getWeather(WeatherUtils.MAINZ)
+        _state.value = _state.value.copy(
+            cityBtnList = listOf(
+                CityBtnModel(MAINZ, true),
+                CityBtnModel(FRANKFURT_AM_MAIN, false),
+                CityBtnModel(WIESBADEN, false),
+                CityBtnModel(DARMSTADT, false),
+            )
+        )
+        onCitySelected(MAINZ)
     }
 
     fun getWeatherWithCurrentLocation(context: Context) {
@@ -59,6 +77,11 @@ class WeatherViewModel @Inject constructor(
                     }
                 }
         } catch (e: SecurityException) {
+            Log.e(
+                WeatherViewModel::class.java.simpleName,
+                "Failed to acquire weather for current location ",
+                e
+            )
         }
     }
 
@@ -70,18 +93,13 @@ class WeatherViewModel @Inject constructor(
         return Gps(roundoffLat.toDouble(), roundoffLon.toDouble())
     }
 
-    fun isLocationCurrentlySelected(gps: Gps): Boolean {
-        if (_gpsQuery.value == gps) {
-            return true
-        }
-        return false
-    }
-
     fun showGPSPermissionSnackBar(textToShow: String, buttonText: String, refused2ndTime: Boolean) {
-        viewModelScope.launch { _eventFlow.emit(
-            UIEvent.ShowGPSPermissionSnackbar(textToShow,buttonText, refused2ndTime))}
+        viewModelScope.launch {
+            _eventFlow.emit(
+                UIEvent.ShowGPSPermissionSnackbar(textToShow, buttonText, refused2ndTime)
+            )
+        }
     }
-
     fun getWeather(gps: Gps) {
         _gpsQuery.value = gps
         weatherJob?.cancel()
@@ -97,7 +115,7 @@ class WeatherViewModel @Inject constructor(
                         }
                         is Resource.Error -> {
                             _state.value = state.value.copy(
-                                weatherInfo = result.data,
+                                weatherInfo = result.data, // null
                                 isLoading = false
                             )
                             _eventFlow.emit(
@@ -106,6 +124,7 @@ class WeatherViewModel @Inject constructor(
                                 )
                             )
                         }
+
                         is Resource.Loading -> {
                             _state.value = state.value.copy(
                                 weatherInfo = result.data,
@@ -116,8 +135,33 @@ class WeatherViewModel @Inject constructor(
                 }.launchIn(this)
         }
     }
-        sealed class UIEvent {
-            data class ShowSnackbar(val message: String) : UIEvent()
-            data class ShowGPSPermissionSnackbar(val message: String, val btnLabel:String, val refused2ndTime: Boolean ) : UIEvent()
+
+    fun onCitySelected(city: City) {
+        Log.d("###", "onCitySelected: $city")
+        getWeather(city.gps)
+        updateCitySelection(city)
+    }
+
+    private fun updateCitySelection(city: City) {
+        val updatedBtnList = state.value.cityBtnList.map { cityBtnModel ->
+            cityBtnModel.copy(
+                isSelected = cityBtnModel.city == city
+            )
         }
+        _state.update { weatherInfoState ->
+            weatherInfoState.copy(
+                cityBtnList = updatedBtnList
+            )
+        }
+    }
+
+    sealed class UIEvent {
+        data class ShowSnackbar(val message: String) : UIEvent()
+        data class ShowGPSPermissionSnackbar(
+            val message: String,
+            val btnLabel: String,
+            val refused2ndTime: Boolean
+        ) : UIEvent()
+    }
 }
+

@@ -6,6 +6,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.android.example.weatherapp.data.local.entity.WeatherInfoEntity
 
+//defines ways to access data
+//suspends waits to get the result
 @Dao
 interface WeatherInfoDao {
 

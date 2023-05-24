@@ -16,7 +16,7 @@ import com.android.example.weatherapp.domain.model.Daily
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -45,7 +45,6 @@ fun DailyItem(
         )
     }
 }
-
 fun formatDate(time: Int, offset: Int, format: String = "EEE, MMMM d"): String {
     // parse the time zone
     val zoneOffset = ZoneOffset.ofHours(offset)

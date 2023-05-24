@@ -1,6 +1,7 @@
 package com.android.example.weatherapp.di
 
 import android.app.Application
+import android.content.res.Resources
 import androidx.room.Room
 import com.android.example.weatherapp.core.util.DefaultDispatchers
 import com.android.example.weatherapp.core.util.DispatcherProvider
@@ -40,7 +41,7 @@ object AppModule {
             app,
             WeatherInfoDatabase::class.java,
             "weather_db"
-        ).addTypeConverter(Converters(GsonParser(Gson()))).build()
+        ).addTypeConverter(Converters(GsonParser(Gson()))).fallbackToDestructiveMigration().build()
     }
 
     @Provides
@@ -48,6 +49,10 @@ object AppModule {
     fun provideWeatherRepository(db: WeatherInfoDatabase, api: WeatherApi): WeatherRepository =
         WeatherRepositoryImpl(api, db.dao)
 
+
+    @Provides
+    @Singleton
+    fun provideResources(app: Application): Resources = app.resources
 
     @Provides
     @Singleton

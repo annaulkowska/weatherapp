@@ -7,8 +7,10 @@ import com.android.example.weatherapp.data.local.entity.WeatherInfoEntity
 
 @Database(
     entities = [WeatherInfoEntity::class],
-    version = 1
-)
+    version = 2,
+    exportSchema = false,
+
+    )
 @TypeConverters(Converters::class)
 abstract class WeatherInfoDatabase: RoomDatabase() {
 
