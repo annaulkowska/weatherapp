@@ -3,15 +3,19 @@ package com.android.example.weatherapp.presentation
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.android.example.weatherapp.CoroutinesTestRule
 import com.android.example.weatherapp.core.util.Resource
-import com.android.example.weatherapp.core.util.WeatherUtils
+import com.android.example.weatherapp.domain.model.MAINZ
+import com.android.example.weatherapp.domain.model.WIESBADEN
 import com.android.example.weatherapp.domain.model.WeatherInfo
 import com.android.example.weatherapp.domain.use_case.GetWeather
+import com.google.common.truth.Truth.assertThat
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -35,71 +39,61 @@ class WeatherViewModelTest {
         tested = WeatherViewModel(use_case, coroutinesTestRule.testDispatcher)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `WHEN getWeather() is called, THEN GetWeather usecase is called`() =
         runTest {
-            val testGPS = WeatherUtils.MAINZ //pre cond
+            val testGPS = MAINZ.gps //pre cond
             every { use_case.invoke(any()) } returns mockk()
             tested.getWeather(testGPS) //test
             delay(100)
-            coVerify { use_case.invoke(testGPS) } // asssert
+            coVerify { use_case.invoke(testGPS) } // assert
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun `WHEN getWeatherInfo(gps) is called and an error occures, return error`() {
-        val testGPS = WeatherUtils.MAINZ
-        val error: Resource.Error<WeatherInfo> = mockk()
+    fun `WHEN getWeatherInfo(gps) is called, THAN weather data is delivered`() = runTest {
+        val testGPS = MAINZ.gps
+        val weatherInfo: WeatherInfo = mockk()
+        val success: Resource.Success<WeatherInfo> = mockk {
+            every { data } returns weatherInfo
+        }
+        every { use_case.invoke(testGPS) } returns flowOf(success) //pre cond
 
+        tested.getWeather(testGPS)
+        advanceUntilIdle()
+
+        assertThat(tested.state.value.weatherInfo).isEqualTo(weatherInfo)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `WHEN getWeatherInfo(gps) is called and an error occurs, show error snackbar`() = runTest {
+        val testGPS = MAINZ.gps
+        val errorMessage = "Test error message"
+        val error: Resource.Error<WeatherInfo> = mockk {
+            every { data } returns mockk()
+            every { message } returns errorMessage
+        }
         every { use_case.invoke(testGPS) } returns flowOf(error) //pre cond
 
+        val firstEvent = tested.eventFlow.first()
         tested.getWeather(testGPS)
-    }
-
-    @Test
-    fun `WHEN getWeatherInfo(gps) is called, THAN weather data is delivered`() {
-        val testGPS = WeatherUtils.MAINZ
-        val data: Resource.Success<WeatherInfo> = mockk()
-
-        every { use_case.invoke(testGPS) } returns flowOf(data) //pre cond
-
-        tested.getWeather(testGPS)
-    }
-
-    // TODO Adjust unit tests after refactoring
-
-    /*    @OptIn(ExperimentalCoroutinesApi::class)
-        @Test
-        fun `WHEN getWeatherInfo(gps) is called and an error occures, show error snackbar`() = runTest {
-            val testGPS = WeatherUtils.MAINZ
-            val errorMessage = "Test error message"
-            val error: Resource.Error<WeatherInfo> = mockk {
-                every { data } returns mockk()
-                every { message } returns errorMessage
-            }
-            every { use_case.invoke(testGPS) } returns flowOf(error) //pre cond
-            val firstEvent = tested.eventFlow.first()
-
-            tested.getWeather(testGPS)
 
             assertThat(firstEvent).isInstanceOf(WeatherViewModel.UIEvent.ShowSnackbar::class.java)
             assertThat((firstEvent as WeatherViewModel.UIEvent.ShowSnackbar).message).isEqualTo(
                 errorMessage
             )
-        }*/
-
-
-    /*    @Test
-        fun `WHEN location is currently selected, THAN return true`() {
-            val testGPS = WeatherUtils.MAINZ
-            val result = tested.isLocationCurrentlySelected(testGPS)
-            assertThat(result).isTrue()
         }
 
+    @Test
+    fun `WHEN city is selected, THAN update WeatherInfoState`() {
+        val testCity = WIESBADEN
 
-        @Test
-        fun `WHEN location is currently NOT selected, THAN return false`() {
-            val testGPS = WeatherUtils.DARMSTADT
-            val result = tested.isLocationCurrentlySelected(testGPS)
-            assertThat(result).isFalse()
-        }*/
+        tested.onCitySelected(testCity)
+        val updatedWeatherState: WeatherInfoState = tested.state.value
+
+        assertThat(updatedWeatherState.cityBtnList.find { it.city == testCity }!!.isSelected).isTrue()
+
+    }
 }

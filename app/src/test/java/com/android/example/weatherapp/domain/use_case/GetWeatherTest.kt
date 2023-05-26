@@ -2,6 +2,7 @@ package com.android.example.weatherapp.domain.use_case
 
 import com.android.example.weatherapp.core.util.Resource
 import com.android.example.weatherapp.core.util.WeatherUtils
+import com.android.example.weatherapp.domain.model.MAINZ
 import com.android.example.weatherapp.domain.model.WeatherInfo
 import com.android.example.weatherapp.domain.repository.WeatherRepository
 import com.google.common.truth.Truth.assertThat
@@ -27,7 +28,7 @@ class GetWeatherTest {
 
     @Test
     fun `WHEN called with gps location (lat, lon) THEN weather info is returned`() {
-        val testGPS = WeatherUtils.MAINZ
+        val testGPS = MAINZ.gps
         every {
             repository.getWeatherInfo(
                 testGPS.lat,
@@ -49,6 +50,7 @@ class GetWeatherTest {
                 WeatherUtils.API_ID
             )
         }
+
         runBlocking {
             assertThat(result.first()).isEqualTo(weatherInfoResource)
         }

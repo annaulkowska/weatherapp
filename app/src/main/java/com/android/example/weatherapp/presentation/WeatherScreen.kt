@@ -233,11 +233,11 @@ fun WeatherToday(
             text = stringResource(
                 R.string.wind_speed,
                 currentWeather.wind_speed.toString() ?: ""
-            ), style = MaterialTheme.typography.body1
+            ), style = MaterialTheme.typography.h6
         )
         Text(
             text = currentWeather.weather.get(0).description ?: "",
-            style = MaterialTheme.typography.body1
+            style = MaterialTheme.typography.h6
         )
     }
     Spacer(modifier = Modifier.width(8.dp))
@@ -248,13 +248,13 @@ fun WeatherToday(
             text = stringResource(
                 R.string.pressure,
                 currentWeather.pressure.toString() ?: ""
-            ), style = MaterialTheme.typography.body1
+            ), style = MaterialTheme.typography.h6
         )
         Text(
             text = stringResource(
                 R.string.humidity,
                 currentWeather.humidity?.toString() ?: ""
-            ), style = MaterialTheme.typography.body1
+            ), style = MaterialTheme.typography.h6
         )
     }
     Spacer(modifier = Modifier.width(8.dp))
@@ -265,19 +265,19 @@ fun WeatherToday(
             text = stringResource(
                 R.string.dew_point,
                 currentWeather.dew_point.roundToInt().toString()
-            ), style = MaterialTheme.typography.body1
+            ), style = MaterialTheme.typography.h6
         )
         Text(
             text = stringResource(
                 R.string.visibility,
                 currentWeather.visibility.toString() ?: ""
-            ), style = MaterialTheme.typography.body1
+            ), style = MaterialTheme.typography.h6
         )
     }
     Spacer(modifier = Modifier.height(16.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
 

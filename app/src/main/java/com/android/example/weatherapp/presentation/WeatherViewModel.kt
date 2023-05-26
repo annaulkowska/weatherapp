@@ -124,7 +124,6 @@ class WeatherViewModel @Inject constructor(
                                 )
                             )
                         }
-
                         is Resource.Loading -> {
                             _state.value = state.value.copy(
                                 weatherInfo = result.data,
@@ -137,7 +136,7 @@ class WeatherViewModel @Inject constructor(
     }
 
     fun onCitySelected(city: City) {
-        Log.d("###", "onCitySelected: $city")
+//        Log.d("###", "onCitySelected: $city")
         getWeather(city.gps)
         updateCitySelection(city)
     }

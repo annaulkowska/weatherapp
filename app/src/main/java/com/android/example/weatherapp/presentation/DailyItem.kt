@@ -24,20 +24,23 @@ fun DailyItem(
     daily: Daily,
     offset: Int
 ){
-    Row(modifier = Modifier
-        .fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
-        ) {
+    ) {
 
         Text(
             text =  formatDate(daily.dt, offset/3600),
             fontSize = 16.sp
         )
         Text(
-            text = daily.temp.max.roundToInt().toString() +"/"+ daily.temp.min.roundToInt().toString() + "°C",
-            fontSize = 16.sp
-        )
+            text = daily.temp.max.roundToInt().toString() + "/" + daily.temp.min.roundToInt()
+                .toString() + "°C",
+            fontSize = 16.sp,
+
+            )
         Image(
             painter = rememberAsyncImagePainter("https://openweathermap.org/img/wn/${daily.weather.get(0).icon}@2x.png"),
             contentDescription = "current_weather_image",
