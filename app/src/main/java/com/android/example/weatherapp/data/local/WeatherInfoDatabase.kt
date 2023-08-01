@@ -13,6 +13,5 @@ import com.android.example.weatherapp.data.local.entity.WeatherInfoEntity
     )
 @TypeConverters(Converters::class)
 abstract class WeatherInfoDatabase: RoomDatabase() {
-
     abstract val dao: WeatherInfoDao
 }

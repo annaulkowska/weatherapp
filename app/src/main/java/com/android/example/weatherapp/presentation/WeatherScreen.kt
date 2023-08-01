@@ -109,7 +109,6 @@ fun WeatherScreen(
                             }
                         }
                     }
-
                     else -> {}
                 }
             }
@@ -280,7 +279,6 @@ fun WeatherToday(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-
         Text(
             text = currentWeather.temp.roundToInt().toString() + "°C",
             style = MaterialTheme.typography.h4
@@ -300,6 +298,5 @@ fun WeatherToday(
                 currentWeather.feels_like.roundToInt().toString()
             ), style = MaterialTheme.typography.h5
         )
-
     }
 }

@@ -29,9 +29,15 @@ class WeatherRepositoryImpl(
         emit(Resource.Loading(data = weatherInfo))
 
         try {
-            val remoteWeatherInfo = api.getWeatherInfo(lat, lon, WeatherUtils.EXCLUDE, WeatherUtils.UNITS, WeatherUtils.API_ID)
-            dao.deleteWeatherInfo(remoteWeatherInfo.lat, remoteWeatherInfo.lon )
-            remoteWeatherInfo?.toWeatherInfoEntity()?.let { dao.insertWeatherInfos(it) }
+            val remoteWeatherInfo = api.getWeatherInfo(
+                lat,
+                lon,
+                WeatherUtils.EXCLUDE,
+                WeatherUtils.UNITS,
+                WeatherUtils.API_ID
+            )
+            dao.deleteWeatherInfo(remoteWeatherInfo.lat, remoteWeatherInfo.lon)
+            remoteWeatherInfo.toWeatherInfoEntity().let { dao.insertWeatherInfos(it) }
         } catch(e: HttpException) {
             emit(
                 Resource.Error(
@@ -46,7 +52,7 @@ class WeatherRepositoryImpl(
             ))
         }
 
-        val newWeatherInfo = dao.getWeatherInfo(lat, lon)?.toWeatherInfo()
+        val newWeatherInfo = dao.getWeatherInfo(lat, lon).toWeatherInfo()
         emit(Resource.Success(newWeatherInfo))
     }
 }

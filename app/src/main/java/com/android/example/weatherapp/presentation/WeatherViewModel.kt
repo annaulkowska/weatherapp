@@ -3,8 +3,6 @@ package com.android.example.weatherapp.presentation
 import android.content.Context
 import android.location.Location
 import android.util.Log
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.example.weatherapp.core.util.DispatcherProvider
@@ -43,9 +41,6 @@ class WeatherViewModel @Inject constructor(
 
     private var fusedLocationClient: FusedLocationProviderClient? = null
 
-    private val _gpsQuery = mutableStateOf(Gps(-1.0, -1.0))
-    val gpsQuery: State<Gps> = _gpsQuery
-
     private val _state = MutableStateFlow(WeatherInfoState())
     val state: StateFlow<WeatherInfoState> = _state.asStateFlow()
 
@@ -53,7 +48,6 @@ class WeatherViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     private var weatherJob: Job? = null
-
     init {
         _state.value = _state.value.copy(
             cityBtnList = listOf(
@@ -65,7 +59,6 @@ class WeatherViewModel @Inject constructor(
         )
         onCitySelected(MAINZ)
     }
-
     fun getWeatherWithCurrentLocation(context: Context) {
         fusedLocationClient = context.getActivity()
             ?.let { LocationServices.getFusedLocationProviderClient(it) }
@@ -74,6 +67,7 @@ class WeatherViewModel @Inject constructor(
                 ?.addOnSuccessListener { location: Location? ->
                     if (location?.latitude != null) {
                         getWeather(formatGpsCoordinates(location))
+                        updateCitySelection(null)
                     }
                 }
         } catch (e: SecurityException) {
@@ -84,7 +78,6 @@ class WeatherViewModel @Inject constructor(
             )
         }
     }
-
     private fun formatGpsCoordinates(location: Location): Gps {
         val df = DecimalFormat("#.####")
         df.roundingMode = RoundingMode.DOWN
@@ -101,7 +94,7 @@ class WeatherViewModel @Inject constructor(
         }
     }
     fun getWeather(gps: Gps) {
-        _gpsQuery.value = gps
+        //   _gpsQuery.value = gps
         weatherJob?.cancel()
         weatherJob = viewModelScope.launch(dispatchers.main) {
             getWeatherInfo(gps)
@@ -124,12 +117,15 @@ class WeatherViewModel @Inject constructor(
                                 )
                             )
                         }
+
                         is Resource.Loading -> {
                             _state.value = state.value.copy(
                                 weatherInfo = result.data,
                                 isLoading = true
                             )
                         }
+
+                        else -> {}
                     }
                 }.launchIn(this)
         }
@@ -141,7 +137,7 @@ class WeatherViewModel @Inject constructor(
         updateCitySelection(city)
     }
 
-    private fun updateCitySelection(city: City) {
+    private fun updateCitySelection(city: City?) {
         val updatedBtnList = state.value.cityBtnList.map { cityBtnModel ->
             cityBtnModel.copy(
                 isSelected = cityBtnModel.city == city

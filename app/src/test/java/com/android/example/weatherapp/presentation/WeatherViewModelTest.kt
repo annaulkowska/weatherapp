@@ -1,6 +1,5 @@
 package com.android.example.weatherapp.presentation
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.android.example.weatherapp.CoroutinesTestRule
 import com.android.example.weatherapp.core.util.Resource
 import com.android.example.weatherapp.domain.model.MAINZ
@@ -26,8 +25,8 @@ class WeatherViewModelTest {
     private var use_case: GetWeather = mockk()
     lateinit var tested: WeatherViewModel
 
-    @get:Rule
-    val taskExecutorRule = InstantTaskExecutorRule()
+//    @get:Rule
+//    val taskExecutorRule = InstantTaskExecutorRule()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @get:Rule

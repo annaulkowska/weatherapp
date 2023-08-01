@@ -15,7 +15,6 @@ data class WeatherInfoEntity(
     val timezone_offset: Int){
 
     fun toWeatherInfo() : WeatherInfo{
-
         return WeatherInfo(
             current = current,
             dailys = dailys,

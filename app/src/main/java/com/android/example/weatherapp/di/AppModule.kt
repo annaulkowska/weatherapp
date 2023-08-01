@@ -49,7 +49,6 @@ object AppModule {
     fun provideWeatherRepository(db: WeatherInfoDatabase, api: WeatherApi): WeatherRepository =
         WeatherRepositoryImpl(api, db.dao)
 
-
     @Provides
     @Singleton
     fun provideResources(app: Application): Resources = app.resources
